@@ -7,6 +7,7 @@ use hyper_util::rt::TokioIo;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
+use tokio::signal::unix::{SignalKind, signal};
 
 async fn handle_request(
     req: Request<hyper::body::Incoming>,
@@ -61,20 +62,37 @@ async fn handle_request(
 #[tokio::main]
 async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
-    let listener = TcpListener::bind(addr).await.unwrap();
+    let listener = TcpListener::bind(addr).await.expect("Failed to bind to port 8080");
     println!("Server running on http://0.0.0.0:8080");
+
+    // Set up SIGINT signal handler
+    let mut sigint = signal(SignalKind::interrupt()).expect("Failed to set up SIGINT handler");
+
     loop {
-        let (stream, _) = listener.accept().await.unwrap();
-        let io = TokioIo::new(stream);
-        tokio::task::spawn(async move {
-            // Finally, we bind the incoming connection to our `hello` service
-            if let Err(err) = http1::Builder::new()
-                // `service_fn` converts our function in a `Service`
-                .serve_connection(io, service_fn(handle_request))
-                .await
-            {
-                eprintln!("Error serving connection: {:?}", err);
+        tokio::select! {
+            _ = sigint.recv() => {
+                println!("\nReceived SIGINT, shutting down...");
+                break;
             }
-        });
+            result = listener.accept() => {
+                match result {
+                    Ok((stream, _)) => {
+                        let io = TokioIo::new(stream);
+                        tokio::task::spawn(async move {
+                            if let Err(err) = http1::Builder::new()
+                                .serve_connection(io, service_fn(handle_request))
+                                .await
+                            {
+                                eprintln!("Error serving connection: {:?}", err);
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        eprintln!("Error accepting connection: {:?}", e);
+                    }
+                }
+            }
+        }
     }
+    println!("Server shut down gracefully");
 }

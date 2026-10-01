@@ -7,4 +7,4 @@ edition = "2024"
 http-body-util = "0.1"
 hyper = { version = "1", features = ["http1", "server"] }
 hyper-util = { version = "0.1", features = ["server", "tokio"] }
-tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"]}
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal"]}
