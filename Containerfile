@@ -13,15 +13,15 @@ COPY src src
 RUN set -e ; if lscpu | grep -q x86_64; then \
     rustup component add clippy &&\
     cargo install cargo-auditable &&\
-    CARGO_BUILD_WARNINGS=deny RUSTFLAGS="-C target-feature=+crt-static" cargo auditable clippy --release --target x86_64-unknown-linux-gnu &&\
-    CARGO_BUILD_WARNINGS=deny RUSTFLAGS="-C target-feature=+crt-static" cargo auditable build --target x86_64-unknown-linux-gnu --release &&\
+    CARGO_BUILD_WARNINGS=deny RUSTFLAGS="-C target-feature=+crt-static" cargo auditable clippy --release --target x86_64-unknown-linux-gnu --locked &&\
+    CARGO_BUILD_WARNINGS=deny RUSTFLAGS="-C target-feature=+crt-static" cargo auditable build --target x86_64-unknown-linux-gnu --release --locked &&\
     cp target/x86_64-unknown-linux-gnu/release/netecho-rs /netecho-rs || exit 1; \
   elif lscpu | grep -q aarch64; then \
     rustup component add clippy &&\
     rustup target add aarch64-unknown-linux-musl &&\
     cargo install cargo-auditable &&\
-    CARGO_BUILD_WARNINGS=deny RUSTFLAGS="-C target-feature=+crt-static" cargo auditable clippy --release --target aarch64-unknown-linux-musl &&\
-    CARGO_BUILD_WARNINGS=deny RUSTFLAGS="-C target-feature=+crt-static" cargo auditable build --target aarch64-unknown-linux-musl --release &&\
+    CARGO_BUILD_WARNINGS=deny RUSTFLAGS="-C target-feature=+crt-static" cargo auditable clippy --release --target aarch64-unknown-linux-musl --locked &&\
+    CARGO_BUILD_WARNINGS=deny RUSTFLAGS="-C target-feature=+crt-static" cargo auditable build --target aarch64-unknown-linux-musl --release --locked &&\
     cp target/aarch64-unknown-linux-musl/release/netecho-rs /netecho-rs; \
   else \
     echo "Unsupported architecture: $(lscpu | grep Architecture | awk '{print $2}')"; \
