@@ -6,6 +6,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '**/Containerfile'
+      - '**/.github/workflows/main-branch-build.yaml'
+      - '**/src/**'
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
 
 permissions:
   contents: read
