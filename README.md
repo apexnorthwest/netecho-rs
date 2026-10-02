@@ -9,8 +9,18 @@ The app exposes port 8080 and listens on the following endpoints:
 
 - `/` returns a 200 OK always
 - `/ok` returns a 200 OK always
-- `/add` will add two numbers, provided by the `n1` and `n2` url query parameters. Ex: `/add?n1=123&n2=456`
+- `/add?n1=123&n2=456` will add two numbers
   - Inputs and outputs are limited to the int64 range
+- `/bytes?n=1024` will return some random data up to 10MiB (not actually random, the random pool is fixed at process start)
+  - `n` is the number of bytes to get
+- `/text?n=1024` will return the same data as `/bytes` but base64 encoded (likewise, this is not actually random data)
+  - `n` is the number of bytes to get
+- `/delay?ms=1000` will return 200 OK after some delay in milliseconds
+  - `ms` is how many milliseconds to delay responding
+- `/random?n=1024` will return some actually random bytes, up to 10MiB
+  - `n` is the number of bytes to get
+- `/randtext?n=1024` will return some actually random bytes, up to 10MiB, encoded as base64
+  - `n` is the number of bytes to get
 - Any other path will return a 404
 
 Currently the app is only built with http/1.1 support. http/2 support is planned for some future point, as
