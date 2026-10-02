@@ -9,6 +9,7 @@ The app exposes port 8080 and listens on the following endpoints:
 
 - `/` returns a 200 OK always
 - `/ok` returns a 200 OK always
+- `/echo` returns a text summary of the whole request the service received
 - `/add?n1=123&n2=456` will add two numbers
   - Inputs and outputs are limited to the int64 range
 - `/bytes?n=1024` will return some random data up to 10MiB (not actually random, the random pool is fixed at process start)
@@ -22,6 +23,9 @@ The app exposes port 8080 and listens on the following endpoints:
 - `/randtext?n=1024` will return some actually random bytes, up to 10MiB, encoded as base64
   - `n` is the number of bytes to get
 - Any other path will return a 404
+
+You can send GET or POST to any endpoint. (Or any method actually, the service doesn't care. You can even make one up.
+This is not a standards compliant web server.)
 
 Currently the app is only built with http/1.1 support. http/2 support is planned for some future point, as
 are additional endpoints for adding extra testing tools. If you have any ideas, we'd love to hear them!

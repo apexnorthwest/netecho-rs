@@ -1,4 +1,5 @@
 use base64::Engine;
+use http_body_util::BodyExt as _;
 use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
@@ -30,6 +31,25 @@ async fn handle_request(
         resp.headers_mut().insert(
             hyper::header::CONTENT_TYPE,
             hyper::header::HeaderValue::from_static("application/json"),
+        );
+        Ok(resp)
+    } else if path == "/echo" {
+        let headers = req.headers().clone();
+        let method = req.method().clone();
+        let query = req.uri().query().unwrap_or("").to_string();
+        let body_bytes = req.into_body().collect().await.unwrap().to_bytes();
+        let body_text = String::from_utf8_lossy(&body_bytes);
+
+        let mut resp = Response::new(Full::new(Bytes::from(format!(
+            "Method: {:?}\n\nQuery: {}\n\nHeaders:\n{:#?}\n\nBody:\n{}",
+            method,
+            query,
+            headers, body_text
+        ))));
+        *resp.headers_mut() = hyper::HeaderMap::new();
+        resp.headers_mut().insert(
+            hyper::header::CONTENT_TYPE,
+            hyper::header::HeaderValue::from_static("text/plain"),
         );
         Ok(resp)
     } else if path == "/add" {
