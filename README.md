@@ -10,14 +10,17 @@ The app exposes port 8080 and listens on the following endpoints:
 - `/` returns a 200 OK always
 - `/ok` returns a 200 OK always
 - `/echo` returns a text summary of the whole request the service received
+  - Request bodies are limited to 10 MiB by default; larger bodies receive a 413 response
+  - Header values with names containing `token`, `secret`, `cookie`, or `authorization` are redacted by default
 - `/add?n1=123&n2=456` will add two numbers
-  - Inputs and outputs are limited to the int64 range
+  - Inputs and outputs are limited to the int64 range; overflowing sums wrap
 - `/bytes?n=1024` will return some random data up to 10MiB (not actually random, the random pool is fixed at process start)
   - `n` is the number of bytes to get
 - `/text?n=1024` will return the same data as `/bytes` but base64 encoded (likewise, this is not actually random data)
   - `n` is the number of bytes to get
 - `/delay?ms=1000` will return 200 OK after some delay in milliseconds
   - `ms` is how many milliseconds to delay responding
+  - Delays above 9000 ms cannot be set safely: request handling times out after 10 seconds
 - `/random?n=1024` will return some actually random bytes, up to 10MiB
   - `n` is the number of bytes to get
 - `/randtext?n=1024` will return some actually random bytes, up to 10MiB, encoded as base64
@@ -29,6 +32,21 @@ This is not a standards compliant web server.)
 
 Currently the app is only built with http/1.1 support. http/2 support is planned for some future point, as
 are additional endpoints for adding extra testing tools. If you have any ideas, we'd love to hear them!
+
+Request handling and HTTP header reads each have a 10-second timeout. A request handling timeout returns
+503; the timeout does not bound response transmission or CPU work that does not yield. Keep-alive
+connections can serve multiple requests. On SIGINT or SIGTERM, the server stops accepting connections
+and allows up to 10 seconds for active connections to finish.
+
+## Configuration
+
+- `NETECHO_ECHO_MAX_BYTES`: maximum `/echo` request body size in bytes, default `10485760` (10 MiB).
+  Set to `0` to accept only empty bodies.
+- `NETECHO_ECHO_SECRETS`: set to `true` to echo all header values without redaction; default `false`.
+
+Invalid configuration values cause startup to fail. Redaction only covers the specified header names:
+query strings, request bodies, and other headers may contain sensitive data. This server listens on all
+interfaces and has no authentication or TLS, so restrict network access to trusted clients.
 
 ## Using it
 There are two main ways to run it, as a container or as a bare binary.
@@ -67,6 +85,47 @@ Regardless, it's a dead simple app to run. This is the use case it was designed 
 You may find our [code of conduct](CODE_OF_CONDUCT.md) and [contributor guidelines](CONTRIBUTING.md)
 in this repo. We expect everyone to follow the guidelines and policies to ensure a positive,
 productive, and enjoyable experience for all involved.
+
+## Fuzz testing
+
+ClusterFuzzLite runs the `socket_http` target with AddressSanitizer on pull requests. The target starts
+the same server used by the binary on an ephemeral loopback port and sends each input as raw TCP bytes.
+Each input is sent on two connections, one with a write-half close and one without.
+The checked-in seed corpus includes all endpoints, chunked input, and pipelined requests. Crashes are
+available as workflow artifacts; the workflow does not persist the generated corpus between runs.
+
+Each exchange is cut off after 100 ms so incomplete requests and `/delay` do not stall fuzzing.
+Consequently, this target does not test slow-client timing or long delays. ClusterFuzzLite allows
+inputs up to 10 MiB plus 64 KiB of HTTP framing.
+
+To run it locally, install a nightly Rust toolchain and `cargo-fuzz`, then:
+
+```sh
+mkdir -p fuzz/corpus/socket_http
+cp fuzz/seeds/socket_http/* fuzz/corpus/socket_http/
+cargo +nightly fuzz run socket_http -- -max_len=10551296
+```
+
+To reproduce a crash, run `cargo +nightly fuzz run socket_http path/to/crash-artifact`.
+The generated corpus and crash artifacts are ignored by Git.
+
+### Pre-release fuzzing
+Maintainers should run a longer session before each release with [fuzz-long.sh](fuzz-long.sh):
+
+```sh
+# 4 hours (the default) using half the CPU cores
+./fuzz-long.sh
+# 12 hours, 8 workers
+WORKERS=8 ./fuzz-long.sh 43200
+```
+
+The script needs a nightly Rust toolchain and `cargo-fuzz`. It keeps the corpus in `fuzz/corpus/socket_http`
+between runs, so later sessions build on earlier ones. It exits non-zero and lists the artifacts if it finds
+a crash, timeout, or out-of-memory condition.
+
+Every input opens loopback connections, so many workers leave a large number of sockets in `TIME_WAIT` on
+the machine for about a minute (the kernel caps this, typically at 131072). That is harmless on a dedicated
+machine, but avoid running the script on a host that is doing other connection-heavy work.
 
 ## License
 Copyright 2026 Apex Northwest

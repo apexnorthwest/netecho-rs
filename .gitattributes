@@ -1,0 +1,2 @@
+# HTTP seeds contain wire-format CRLFs and must not undergo line-ending conversion.
+fuzz/seeds/** binary

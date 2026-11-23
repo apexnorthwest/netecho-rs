@@ -1,0 +1,7 @@
+GET /ok HTTP/1.1
+Host: localhost
+
+GET /add?n1=2&n2=3 HTTP/1.1
+Host: localhost
+Connection: close
+

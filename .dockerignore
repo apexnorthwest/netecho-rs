@@ -1,0 +1,5 @@
+.git
+target
+fuzz/target
+fuzz/artifacts
+fuzz/corpus
