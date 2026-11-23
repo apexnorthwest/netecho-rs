@@ -1,0 +1,24 @@
+[package]
+name = "netecho-rs-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+libc = "0.2"
+netecho-rs = { path = ".." }
+tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread", "time"] }
+
+[[bin]]
+name = "socket_http"
+path = "fuzz_targets/socket_http.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]
